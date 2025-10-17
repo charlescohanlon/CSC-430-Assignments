@@ -475,7 +475,7 @@
 ;; ill-formed expression
 (check-exn #px"SHEQ"
            (λ () (top-interp '{{def f () : {{}}}
-                              {def main () : {f}}})))
+                               {def main () : {f}}})))
 ;; Invalid binop syntax - not enough arguments
 (check-exn #px"SHEQ"
            (λ () (top-interp '{{def main () : {+ 5}}})))
