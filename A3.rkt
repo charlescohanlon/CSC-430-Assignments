@@ -296,7 +296,7 @@
 (check-= (top-interp '{{def fact (n) : 
                          {ifleq0? n 
                                   1 
-                                  {* n {fact {- n 1}}}}}
+                                  {* n {fact {- a 1}}}}}
                        {def main () : {fact 5}}})
          120 0.0)
 
