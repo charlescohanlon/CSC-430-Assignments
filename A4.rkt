@@ -28,7 +28,7 @@
 (struct BoolV ([b : Boolean]) #:transparent)
 (struct StrV ([s : String]) #:transparent)
 (struct CloV ([params : (Listof Symbol)] [body : ExprC] [env : Env]) #:transparent)
-(struct PrimV ([f : Any]) #:transparent)
+(struct PrimV ([f : Symbol]) #:transparent)
 (define-type Value (U NumV BoolV StrV CloV PrimV))
 
 (define (serialize [v : Value]) : String
@@ -56,17 +56,34 @@
 
 (define top-level-env
   (Env (list
-        (Binding '+ (PrimV +))
-        (Binding '- (PrimV -))
-        (Binding '* (PrimV *))
-        (Binding '/ (PrimV /))
-        (Binding '<= (PrimV <=))
-        (Binding 'substring (PrimV substring))
-        (Binding 'strlen (PrimV string-length))
-        (Binding 'equal? (PrimV equal?))
+        (Binding '+ (PrimV '+))
+        (Binding '- (PrimV '-))
+        (Binding '* (PrimV '*))
+        (Binding '/ (PrimV '/))
+        (Binding '<= (PrimV '<=))
+        (Binding 'substring (PrimV 'substring))
+        (Binding 'strlen (PrimV 'string-length))
+        (Binding 'equal? (PrimV 'equal?))
         (Binding 'true (BoolV #t))
         (Binding 'false (BoolV #f))
-        (Binding 'error (PrimV error)))))
+        (Binding 'error (PrimV 'error)))))
+
+(define (eval-prim [op : Symbol] [args : (Listof Value)]) : Value
+  (match (list op args)
+    [(list '+ (list (NumV l) (NumV r))) (NumV (+ l r))]
+    [(list '- (list (NumV l) (NumV r))) (NumV (- l r))]
+    [(list '* (list (NumV l) (NumV r))) (NumV (* l r))]
+    [(list '/ (list (NumV l) (NumV r))) (NumV (/ l r))]
+    [(list '<= (list (NumV l) (NumV r))) (BoolV (<= l r))]
+    [(list 'substring (list (StrV s) (NumV start) (NumV stop)))
+     (StrV (substring s (cast start Integer) (cast stop Integer)))] ; Cast to integers?
+    [(list 'strlen (list (StrV s))) (NumV (string-length s))]
+    [(list 'equal? (list l r)) (BoolV (equal? l r))]
+    [(list 'true) (BoolV #t)]
+    [(list 'false) (BoolV #f)]
+    [(list 'error (list v)) (error "~v" v)]))
+; TODO: need to check arity and argument types here
+
 
 (define reserved-set (list 'if ': 'let '= 'in 'end))
 (define (is-reserved? [s : Symbol]) : Boolean
@@ -122,6 +139,7 @@
                                                                 (map
                                                                  (lambda ([arg : ExprC])
                                                                    (interp arg env)) args)))])]
+       [(PrimV op) (eval-prim op (map (lambda ([arg : ExprC]) (interp arg env)) args))]
        [_ (error "SHEQ: function ~a is ill-formed" fun)])]
     ))
 
