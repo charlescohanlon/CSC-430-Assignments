@@ -65,7 +65,7 @@
 
 ;also check for the arguments, need to check if theres an appropriate amount of args ie + only accets 2 Special cases
 ;no zero division
-;argument types: substring needs to be a natural number becasue no floating point index 
+;argument types: substring needs to be a natural number becasue no floating point index
 
 (define (eval-prim [op : Symbol] [args : (Listof Value)]) : Value
   (match (list op args)
@@ -75,10 +75,10 @@
     [(list '* (list (NumV l) (NumV r))) (NumV (* l r))]
     [(list '/ (list (NumV l) (NumV r)))
      (cond
-       [(zero? r) (error 'eval-prim "SHEQ - division by zero ~a/~a" l r)]
+       [(zero? r) (error 'eval-prim "SHEQ: division by zero ~a/~a" l r)]
        [else (NumV (/ l r))])]
     [(list '<= (list (NumV l) (NumV r))) (BoolV (<= l r))]
-    
+
     ;; String ops
     [(list 'substring (list (StrV s) (NumV start) (NumV stop)))
      (cond
@@ -87,7 +87,7 @@
             (< start 0)
             (< stop start)
             (> stop (string-length s)))
-        (error 'eval-prim "SHEQ - invalid substring range ~a ~a ~a" s start stop)]
+        (error 'eval-prim "SHEQ: invalid substring range ~a ~a ~a" s start stop)]
        [else (StrV (substring s (exact-round start) (exact-round stop)))])]
     [(list 'string-length (list (StrV s))) (NumV (string-length s))]
 
@@ -99,7 +99,7 @@
 
     ;; Catch-all for any other wrong arity/type
     [_ (error 'eval-prim
-              (format "SHEQ - bad primitive application ~a with args ~a" op args))]))
+              (format "SHEQ: bad primitive application ~a with args ~a" op args))]))
 
 
 (define reserved-set (list 'if ': 'let '= 'in 'end))
@@ -306,20 +306,20 @@
 (check-equal? (top-interp '{/ 12 3}) "4")
 
 ;; Arithmetic with non-numbers should error TODO: implement arg checks
- (check-exn #px"SHEQ" (lambda () (top-interp '{+ true 3})))
- (check-exn #px"SHEQ" (lambda () (top-interp '{+ 3 "hello"})))
- (check-exn #px"SHEQ" (lambda () (top-interp '{- "x" 3})))
- (check-exn #px"SHEQ" (lambda () (top-interp '{* false true})))
- (check-exn #px"SHEQ" (lambda () (top-interp '{/ 5 false})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{+ true 3})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{+ 3 "hello"})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{- "x" 3})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{* false true})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{/ 5 false})))
 
 ; Division by zero
- (check-exn #px"SHEQ" (lambda () (top-interp '{/ 5 0})))
- (check-exn #px"SHEQ" (lambda () (top-interp '{/ 0 0})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{/ 5 0})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{/ 0 0})))
 
 ;; Wrong number of arguments
- (check-exn #px"SHEQ" (lambda () (top-interp '{+})))
- (check-exn #px"SHEQ" (lambda () (top-interp '{+ 1})))
- (check-exn #px"SHEQ" (lambda () (top-interp '{+ 1 2 3})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{+})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{+ 1})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{+ 1 2 3})))
 
 ;; Invalid substring range (stop < start)
 (check-exn
@@ -346,8 +346,8 @@
 (check-equal? (top-interp '{<= -5 -2}) "true")
 
 ;; <= with non-numbers
-; (check-exn #px"SHEQ" (lambda () (top-interp '{<= "3" 4})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{<= true false})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{<= "3" 4})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{<= true false})))
 
 ;; equal? tests
 (check-equal? (top-interp '{equal? 3 3}) "true")
@@ -365,14 +365,14 @@
 (check-equal? (top-interp '{equal? false 0}) "false")
 
 ;; equal? with functions returns false
-; (check-equal? (top-interp '{equal? {lambda (x) : x} {lambda (x) : x}}) "false")
-; (check-equal? (top-interp '{equal? + +}) "false")
-; (check-equal? (top-interp '{equal? + -}) "false")
+(check-equal? (top-interp '{equal? {lambda (x) : x} {lambda (x) : x}}) "false")
+(check-equal? (top-interp '{equal? + +}) "false")
+(check-equal? (top-interp '{equal? + -}) "false")
 
 ;; Wrong number of arguments
-; (check-exn #px"SHEQ" (lambda () (top-interp '{equal?})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{equal? 1})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{equal? 1 2 3})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{equal?})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{equal? 1})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{equal? 1 2 3})))
 
 ;; ============================================
 ;; STRING OPERATIONS TESTS
@@ -383,8 +383,8 @@
 (check-equal? (top-interp '{strlen "a"}) "1")
 
 ;; strlen with non-string
-; (check-exn #px"SHEQ" (lambda () (top-interp '{strlen 5})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{strlen true})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{strlen 5})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{strlen true})))
 
 (check-equal? (top-interp '{substring "hello" 0 5}) "\"hello\"")
 (check-equal? (top-interp '{substring "hello" 1 4}) "\"ell\"")
@@ -392,11 +392,11 @@
 (check-equal? (top-interp '{substring "hello" 2 2}) "\"\"")
 
 ;; substring errors
-; (check-exn #px"SHEQ" (lambda () (top-interp '{substring 123 0 1}))) ; non-string
-; (check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 1.5 3}))) ; non-natural
-; (check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" -1 3}))) ; negative
-; (check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 0 6}))) ; out of range
-; (check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 3 2}))) ; stop before start
+(check-exn #px"SHEQ" (lambda () (top-interp '{substring 123 0 1}))) ; non-string
+(check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 1.5 3}))) ; non-natural
+(check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" -1 3}))) ; negative
+(check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 0 6}))) ; out of range
+(check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 3 2}))) ; stop before start
 
 ;; ============================================
 ;; ERROR FUNCTION TESTS
@@ -432,9 +432,9 @@
 (check-equal? (top-interp '{{{lambda (x) : {lambda (y) : {+ x y}}} 3} 4}) "7")
 
 ;; Wrong number of arguments
-; (check-exn #px"SHEQ" (lambda () (top-interp '{{lambda (x) : x}})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{{lambda (x) : x} 1 2})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{{lambda (x y) : x} 1})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{{lambda (x) : x}})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{{lambda (x) : x} 1 2})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{{lambda (x y) : x} 1})))
 
 ;; Application of non-function
 (check-exn #px"SHEQ" (lambda () (top-interp '{3 4})))
@@ -526,19 +526,19 @@
 (check-equal? (top-interp
                '{{lambda (f x y) : {f x y}} + 10 20}) "30")
 
-; (check-exn #px"SHEQ" (lambda () (top-interp '{+ 1 true})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{+ 1 true})))
 (check-exn #px"SHEQ" (lambda () (top-interp 'undefined-var)))
 (check-exn #px"SHEQ" (lambda () (top-interp '{if 5 1 2})))
 (check-exn #px"SHEQ" (lambda () (top-interp '{{lambda (x) : x} 1 2})))
 (check-exn #px"SHEQ" (lambda () (top-interp '{3 4})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{/ 1 0})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{/ 1 0})))
 (check-exn #px"SHEQ" (lambda () (parse '{lambda (x x) : x})))
 (check-exn #px"SHEQ" (lambda () (parse '{let {[x = 1] [x = 2]} in x end})))
 
 ;; Wrong arity for primitives
-; (check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 0})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 0 3 5})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{strlen})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{strlen "hello" "world"})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{error})))
-; (check-exn #px"SHEQ" (lambda () (top-interp '{error 1 2})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 0})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{substring "hello" 0 3 5})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{strlen})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{strlen "hello" "world"})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{error})))
+(check-exn #px"SHEQ" (lambda () (top-interp '{error 1 2})))
