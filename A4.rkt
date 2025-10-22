@@ -74,8 +74,6 @@
      (StrV (substring s start stop))]
     [(list 'string-length (list (StrV s))) (NumV (string-length s))]
     [(list 'equal? (list l r)) (BoolV (equal? l r))]
-    [(list 'true) (BoolV #t)]
-    [(list 'false) (BoolV #f)]
     [(list 'error (list v)) (error "user-error: ~v" v)]))
 
 (define reserved-set (list 'if ': 'let '= 'in 'end))
@@ -474,17 +472,6 @@
 ;; Empty string operations
 (check-equal? (top-interp '{strlen ""}) "0")
 (check-equal? (top-interp '{substring "" 0 0}) "\"\"")
-
-;; Deep nesting
-; (check-equal? (top-interp
-;                '{{{{{{lambda (a) :
-;                        {lambda (b) :
-;                          {lambda (c) :
-;                            {lambda (d) :
-;                              {lambda (e) :
-;                                {lambda (f) :
-;                                  {+ {+ {+ {+ {+ a b} c} d} e} f}}}}}}}
-;                      1} 2} 3} 4} 5} 6}) "21")
 
 ;; Many let bindings
 (check-equal? (top-interp
