@@ -87,12 +87,27 @@
             (< start 0)
             (< stop start)
             (> stop (string-length s)))
-        (error 'eval-prim "SHEQ: invalid substring range ~a ~a ~a" s start stop)]
+        (error 'eval-prim "SHEQ - invalid substring range ~a ~a ~a" s start stop)]
        [else (StrV (substring s (exact-round start) (exact-round stop)))])]
     [(list 'string-length (list (StrV s))) (NumV (string-length s))]
 
     ;; Equality
-    [(list 'equal? (list l r)) (BoolV (equal? l r))]
+    [(list 'equal? (list l r))
+     (cond
+       ;; Functions or primitives → always false
+       [(or (CloV? l) (CloV? r) (PrimV? l) (PrimV? r))
+        (BoolV #f)]
+       ;; Numbers
+       [(and (NumV? l) (NumV? r))
+        (BoolV (= (NumV-n l) (NumV-n r)))]
+       ;; Booleans
+       [(and (BoolV? l) (BoolV? r))
+        (BoolV (eq? (BoolV-b l) (BoolV-b r)))]
+       ;; Strings
+       [(and (StrV? l) (StrV? r))
+        (BoolV (string=? (StrV-s l) (StrV-s r)))]
+       ;; Anything else
+       [else (BoolV #f)])]
 
     ;; Error primitive
     [(list 'error (list v)) (error "user-error: ~v" v)]
