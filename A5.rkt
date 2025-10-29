@@ -59,7 +59,11 @@
         (Binding 'equal? (PrimV 'equal?))
         (Binding 'true (BoolV #t))
         (Binding 'false (BoolV #f))
-        (Binding 'error (PrimV 'error)))))
+        (Binding 'error (PrimV 'error))
+        (Binding 'seq (PrimV 'seq))
+        (Binding 'println (PrimV 'println))
+        (Binding 'read-num (PrimV 'read-num))
+        (Binding 'read-str (PrimV 'read-str)))))
 
 (define (eval-prim [op : Symbol] [args : (Listof Value)]) : Value
   (match (list op args)
@@ -119,6 +123,12 @@
     [(list 'read-str)
      (display ">")
      (StrC (read-line))]
+
+    ;; seq - evaluate expressions in order, return last value
+    [(list 'seq args)
+     (cond
+       [(empty? args) (error "SHEQ: seq requires at least one expression")]
+       [else (last args)])]
 
     ;; Catch-all for any other wrong arity/type
     [_ (error 'eval-prim
