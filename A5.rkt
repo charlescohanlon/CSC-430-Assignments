@@ -2,10 +2,8 @@
 #lang typed/racket
 (require typed/rackunit)
 
-; TODO: EQUAL ON FUNCTIONS SHOULD RETURN FALSE
-
 ;; ====================
-;; SHEQ4 language AST structs, types, and utilites
+;; SHEQ5 language AST structs, types, and utilites
 ;; ====================
 
 ; Core types
@@ -102,6 +100,25 @@
 
     ;; Error primitive
     [(list 'error (list v)) (error "user-error: ~v" v)]
+
+    ;; SHEQ5 New library functions
+    [(list 'println s)
+     (match s
+       [(StrV v) (displayln v)]
+       [_ (error "SHEQ: println expects a string argument, got ~a" s)])
+     (BoolV #t)]
+
+    [(list 'read-num)
+     (display ">")
+     (match (read-line)
+       [(? string? s)
+        (match (string->number s)
+          [(? real? n) (NumV n)]
+          [_ (error "SHEQ: read-num expects a valid real number as input, got ~a" s)])])]
+
+    [(list 'read-str)
+     (display ">")
+     (StrC (read-line))]
 
     ;; Catch-all for any other wrong arity/type
     [_ (error 'eval-prim
