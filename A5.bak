@@ -63,8 +63,7 @@
         (Binding 'seq (PrimV 'seq))
         (Binding 'println (PrimV 'println))
         (Binding 'read-num (PrimV 'read-num))
-        (Binding 'read-str (PrimV 'read-str))
-        (Binding '++ (PrimV '++)))))
+        (Binding 'read-str (PrimV 'read-str)))))
 
 (define (eval-prim [op : Symbol] [args : (Listof Value)]) : Value
   (match (list op args)
@@ -130,19 +129,6 @@
      (cond
        [(empty? args) (error "SHEQ: seq requires at least one expression")]
        [else (last args)])]
-    ;; ++ concatenation
-    [(list '++ args)
-     (define (coerce-to-string [v : Value]) : String
-       (match v
-         [(StrV s) s]
-         [(NumV n) (format "~a" n)]
-         [(BoolV b) (if b "true" "false")]
-         [(? CloV?) "#<procedure>"]
-         [(? PrimV?) "#<primop>"]
-         [_ (format "~a" v)]))
-     (define joined
-       (apply string-append (map coerce-to-string args)))
-     (StrV joined)]
 
     ;; Catch-all for any other wrong arity/type
     [_ (error 'eval-prim
@@ -598,11 +584,4 @@
 (check-exn #px"SHEQ" (lambda () (top-interp '{strlen "hello" "world"})))
 (check-exn #px"SHEQ" (lambda () (top-interp '{error})))
 (check-exn #px"SHEQ" (lambda () (top-interp '{error 1 2})))
-;; ++ concatenation tests
-(check-equal? (top-interp '{++ "hello" " " "world"}) "\"hello world\"")
-(check-equal? (top-interp '{++ "num:" 42}) "\"num:42\"")
-(check-equal? (top-interp '{++ "bool:" true}) "\"bool:true\"")
-(check-equal? (top-interp '{++ "mix:" 1 " " true " " "done"}) "\"mix:1 true done\"")
 
-;; Empty concatenation
-(check-equal? (top-interp '{++}) "\"\"")
