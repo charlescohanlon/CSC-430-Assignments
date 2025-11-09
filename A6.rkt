@@ -79,7 +79,7 @@
 
 ; make-init-sto: creates the initial store with a specific size memsize
 (define (make-init-sto [memsize : Natural]) : Store
-  (define init-sto : Store
+  (define init-sto
     ; First position is used to indicated index of next free location.
     (Store (vector (NullV)
                    (PrimV '+)
@@ -93,6 +93,7 @@
                    (BoolV #t)
                    (BoolV #f)
                    (PrimV 'error)
+                   (PrimV 'seq)
                    (PrimV 'make-array)
                    (PrimV 'array)
                    (PrimV 'aref)
@@ -182,7 +183,7 @@
 
     [(list 'make-array (list (NumV len) elm))
      (cond
-       [(and (natural? len) (> len 0)) (make-array len elm sto)]
+       [(and (natural? len) (>= len 1)) (make-array len elm sto)]
        [else (error (format "SHEQ: cannot create array of length ~a" len))])]
 
     [(list 'array (list elms ...))
@@ -328,7 +329,7 @@
 ;; ============================================
 ;; PARSING TESTS
 ;; ============================================
-(define default-memsize 30)
+(define default-memsize 50)
 
 ;; Basic literals
 (check-equal? (parse '42) (NumC 42))
@@ -748,136 +749,137 @@
 ;; Error: out of memory (array too large)
 (check-exn #px"SHEQ" (lambda () (top-interp '{make-array 1000 0} default-memsize)))
 
-; ;; ============================================
-; ;; array tests
-; ;; ============================================
+;; ============================================
+;; array tests
+;; ============================================
 
-; ;; Basic array functionality
-; (check-equal? (top-interp '{array 1} default-memsize) "#<array>")
-; (check-equal? (top-interp '{array 1 2 3} default-memsize) "#<array>")
-; (check-equal? (top-interp '{array "a" "b" "c" "d"} default-memsize) "#<array>")
+;; Basic array functionality
+(check-equal? (top-interp '{array 1} default-memsize) "#<array>")
+(check-equal? (top-interp '{array 1 2 3} default-memsize) "#<array>")
+(check-equal? (top-interp '{array "a" "b" "c" "d"} default-memsize) "#<array>")
 
-; ;; array with mixed types
-; (check-equal? (top-interp '{array 1 "hello" true 3.14} default-memsize) "#<array>")
-; (check-equal? (top-interp '{array false null 42 "world"} default-memsize) "#<array>")
+;; array with mixed types
+(check-equal? (top-interp '{array 1 "hello" true 3.14} default-memsize) "#<array>")
+(check-equal? (top-interp '{array false null 42 "world"} default-memsize) "#<array>")
 
-; ;; array with expressions
-; (check-equal? (top-interp '{array {+ 1 2} {* 3 4} {- 10 5}} default-memsize) "#<array>")
+;; array with expressions
+(check-equal? (top-interp '{array {+ 1 2} {* 3 4} {- 10 5}} default-memsize) "#<array>")
 
-; ;; Error: array with no elements
-; (check-exn #px"" (lambda () (top-interp '{array} default-memsize)))
+;; Error: array with no elements
+(check-exn #px"" (lambda () (top-interp '{array} default-memsize)))
 
-; ;; ============================================
-; ;; aref tests
-; ;; ============================================
+;; ============================================
+;; aref tests
+;; ============================================
 
-; ;; Basic aref functionality
-; (check-equal? (top-interp '{aref {array 10 20 30} 0} default-memsize) "10")
-; (check-equal? (top-interp '{aref {array 10 20 30} 1} default-memsize) "20")
-; (check-equal? (top-interp '{aref {array 10 20 30} 2} default-memsize) "30")
+;; Basic aref functionality
+(check-equal? (top-interp '{aref {array 10 20 30} 0} default-memsize) "10")
+(check-equal? (top-interp '{aref {array 10 20 30} 1} default-memsize) "20")
+(check-equal? (top-interp '{aref {array 10 20 30} 2} default-memsize) "30")
 
-; ;; aref with different types
-; (check-equal? (top-interp '{aref {array "a" "b" "c"} 0} default-memsize) "\"a\"")
-; (check-equal? (top-interp '{aref {array true false} 1} default-memsize) "false")
-; (check-equal? (top-interp '{aref {array 3.14 2.71} 0} default-memsize) "3.14")
+;; aref with different types
+(check-equal? (top-interp '{aref {array "a" "b" "c"} 0} default-memsize) "\"a\"")
+(check-equal? (top-interp '{aref {array true false} 1} default-memsize) "false")
+(check-equal? (top-interp '{aref {array 3.14 2.71} 0} default-memsize) "3.14")
 
-; ;; aref with make-array
-; (check-equal? (top-interp '{aref {make-array 5 42} 0} default-memsize) "42")
-; (check-equal? (top-interp '{aref {make-array 5 42} 4} default-memsize) "42")
+;; aref with make-array
+(check-equal? (top-interp '{aref {make-array 5 42} 0} default-memsize) "42")
+(check-equal? (top-interp '{aref {make-array 5 42} 4} default-memsize) "42")
 
-; ;; aref with complex expressions for index
-; (check-equal? (top-interp '{aref {array 1 2 3 4} {+ 1 2}} default-memsize) "4")
-; (check-equal? (top-interp '{aref {array 10 20 30} {- 2 1}} default-memsize) "20")
+;; aref with complex expressions for index
+(check-equal? (top-interp '{aref {array 1 2 3 4} {+ 1 2}} default-memsize) "4")
+(check-equal? (top-interp '{aref {array 10 20 30} {- 2 1}} default-memsize) "20")
 
-; ;; aref in let binding
-; (check-equal? (top-interp '{let {[arr = {array 5 10 15}]}
-;                              in {aref arr 1}
-;                              end} default-memsize) "10")
+;; aref in let binding
+(check-equal? (top-interp '{let {[arr = {array 5 10 15}]}
+                             in {aref arr 1}
+                             end} default-memsize) "10")
 
-; ;; Error: aref with negative index
-; (check-exn #px"" (lambda () (top-interp '{aref {array 1 2 3} -1} default-memsize)))
+;; Error: aref with negative index
+(check-exn #px"" (lambda () (top-interp '{aref {array 1 2 3} -1} default-memsize)))
 
-; ;; Error: aref with index >= array size
-; (check-exn #px"" (lambda () (top-interp '{aref {array 1 2 3} 3} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aref {array 1} 1} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aref {array 1 2} 10} default-memsize)))
+;; Error: aref with index >= array size
+(check-exn #px"" (lambda () (top-interp '{aref {array 1 2 3} 3} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aref {array 1} 1} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aref {array 1 2} 10} default-memsize)))
 
-; ;; Error: aref on non-array
-; (check-exn #px"" (lambda () (top-interp '{aref 42 0} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aref "not an array" 0} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aref true 0} default-memsize)))
+;; Error: aref on non-array
+(check-exn #px"" (lambda () (top-interp '{aref 42 0} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aref "not an array" 0} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aref true 0} default-memsize)))
 
-; ;; Error: aref with non-numeric index
-; (check-exn #px"" (lambda () (top-interp '{aref {array 1 2 3} "zero"} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aref {array 1 2 3} true} default-memsize)))
+;; Error: aref with non-numeric index
+(check-exn #px"" (lambda () (top-interp '{aref {array 1 2 3} "zero"} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aref {array 1 2 3} true} default-memsize)))
 
-; ;; ============================================
-; ;; aset! tests
-; ;; ============================================
+; ============================================
+; aset! tests
+; ============================================
 
-; ;; Basic aset! functionality (returns null)
-; (check-equal? (top-interp '{aset! {array 1 2 3} 0 100} default-memsize) "null")
-; (check-equal? (top-interp '{aset! {make-array 3 0} 1 42} default-memsize) "null")
+;; Basic aset! functionality (returns null)
+(check-equal? (top-interp '{aset! {array 1 2 3} 0 100} default-memsize) "null")
+(check-equal? (top-interp '{aset! {make-array 3 0} 1 42} default-memsize) "null")
 
-; ;; aset! and then aref to verify mutation
-; (check-equal? (top-interp '{let {[arr = {array 10 20 30}]}
-;                              in {seq {aset! arr 1 99}
-;                                      {aref arr 1}}
-;                              end} default-memsize) "99")
+;; aset! and then aref to verify mutation
+(check-equal? (top-interp '{let {[arr = {array 10 20 30}]}
+                             in {seq {aset! arr 1 99}
+                                     {aref arr 1}}
+                             end} default-memsize) "99")
 
-; (check-equal? (top-interp '{let {[arr = {make-array 5 0}]}
-;                              in {seq {aset! arr 0 100}
-;                                      {aset! arr 4 400}
-;                                      {aref arr 0}}
-;                              end} default-memsize) "100")
+(check-equal? (top-interp '{let {[arr = {make-array 5 0}]}
+                             in {seq {aset! arr 0 100}
+                                     {aset! arr 4 400}
+                                     {aref arr 0}}
+                             end} default-memsize) "100")
 
-; ;; aset! with different types
-; (check-equal? (top-interp '{let {[arr = {array 1 2 3}]}
-;                              in {seq {aset! arr 0 "hello"}
-;                                      {aref arr 0}}
-;                              end} default-memsize) "\"hello\"")
+;; aset! with different types
+(check-equal? (top-interp '{let {[arr = {array 1 2 3}]}
+                             in {seq {aset! arr 0 "hello"}
+                                     {aref arr 0}}
+                             end} default-memsize) "\"hello\"")
 
-; (check-equal? (top-interp '{let {[arr = {array "a" "b"}]}
-;                              in {seq {aset! arr 1 true}
-;                                      {aref arr 1}}
-;                              end} default-memsize) "true")
+(check-equal? (top-interp '{let {[arr = {array "a" "b"}]}
+                             in {seq {aset! arr 1 true}
+                                     {aref arr 1}}
+                             end} default-memsize) "true")
 
-; ;; aset! with expressions
-; (check-equal? (top-interp '{let {[arr = {array 0 0 0}]}
-;                              in {seq {aset! arr 1 {+ 5 10}}
-;                                      {aref arr 1}}
-;                              end} default-memsize) "15")
+;; aset! with expressions
+(check-equal? (top-interp '{let {[arr = {array 0 0 0}]}
+                             in {seq {aset! arr 1 {+ 5 10}}
+                                     {aref arr 1}}
+                             end} default-memsize) "15")
 
-; ;; Multiple mutations
-; (check-equal? (top-interp '{let {[arr = {array 1 2 3 4 5}]}
-;                              in {seq {aset! arr 0 10}
-;                                      {aset! arr 1 20}
-;                                      {aset! arr 2 30}
-;                                      {aset! arr 3 40}
-;                                      {aset! arr 4 50}
-;                                      {aref arr 2}}
-;                              end} default-memsize) "30")
+;; Multiple mutations
+(check-equal? (top-interp '{let {[arr = {array 1 2 3 4 5}]}
+                             in {seq {aset! arr 0 10}
+                                     {aset! arr 1 20}
+                                     {aset! arr 2 30}
+                                     {aset! arr 3 40}
+                                     {aset! arr 4 50}
+                                     {aref arr 2}}
+                             end} default-memsize) "30")
 
-; ;; Error: aset! with negative index
-; (check-exn #px"" (lambda () (top-interp '{aset! {array 1 2 3} -1 100} default-memsize)))
+;; Error: aset! with negative index
+(check-exn #px"" (lambda () (top-interp '{aset! {array 1 2 3} -1 100} default-memsize)))
 
-; ;; Error: aset! with index >= array size
-; (check-exn #px"" (lambda () (top-interp '{aset! {array 1 2 3} 3 100} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aset! {array 1} 1 100} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aset! {make-array 2 0} 5 100} default-memsize)))
+;; Error: aset! with index >= array size
+(check-exn #px"" (lambda () (top-interp '{aset! {array 1 2 3} 3 100} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aset! {array 1} 1 100} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aset! {make-array 2 0} 5 100} default-memsize)))
 
-; ;; Error: aset! on non-array
-; (check-exn #px"" (lambda () (top-interp '{aset! 42 0 100} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aset! "not an array" 0 100} default-memsize)))
+;; Error: aset! on non-array
+(check-exn #px"" (lambda () (top-interp '{aset! 42 0 100} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aset! "not an array" 0 100} default-memsize)))
 
-; ;; Error: aset! with non-numeric index
-; (check-exn #px"" (lambda () (top-interp '{aset! {array 1 2 3} "zero" 100} default-memsize)))
-; (check-exn #px"" (lambda () (top-interp '{aset! {array 1 2 3} false 100} default-memsize)))
+;; Error: aset! with non-numeric index
+(check-exn #px"" (lambda () (top-interp '{aset! {array 1 2 3} "zero" 100} default-memsize)))
+(check-exn #px"" (lambda () (top-interp '{aset! {array 1 2 3} false 100} default-memsize)))
 
-; ;; ============================================
-; ;; Order of evaluation tests
-; ;; ============================================
+; ============================================
+; Order of evaluation tests
+; ============================================
 
+; NOTE: uncomment when := is implemented
 ; ;; make-array evaluates size before initial value
 ; (check-equal? (top-interp '{let {[x = 5]}
 ;                              in {make-array {seq {x := 3} x} {seq {x := 10} x}}
@@ -907,18 +909,17 @@
 ;                                      {aref arr 2}}
 ;                              end} default-memsize) "999")
 
-; ;; ============================================
-; ;; Array equality tests
-; ;; ============================================
+;; ============================================
+;; Array equality tests
+;; ============================================
 
-; ;; Arrays are equal only if they are the same array
-; (check-equal? (top-interp '{let {[arr = {array 1 2 3}]}
-;                              in {equal? arr arr}
-;                              end} default-memsize) "true")
+;; Arrays are equal only if they are the same array
+(check-equal? (top-interp '{let {[arr = {array 1 2 3}]}
+                             in {equal? arr arr}
+                             end} default-memsize) "true")
 
-; (check-equal? (top-interp '{equal? {array 1 2 3} {array 1 2 3}} default-memsize) "false")
+(check-equal? (top-interp '{equal? {array 1 2 3} {array 1 2 3}} default-memsize) "false")
 
-; (check-equal? (top-interp '{let {[arr1 = {array 1 2}]
-;                                  [arr2 = arr1]}
-;                              in {equal? arr1 arr2}
-;                              end} default-memsize) "true")
+(check-equal? (top-interp '{let {[arr1 = {array 1 2}]}
+                             in {let {[arr2 = arr1]}
+                                  in {equal? arr1 arr2} end} end} default-memsize) "true")
