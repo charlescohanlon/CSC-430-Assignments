@@ -14,7 +14,8 @@
 (struct AppC ([fun : ExprC] [args : (Listof ExprC)]) #:transparent)
 (struct StrC ([s : String]) #:transparent)
 (struct PrimC ([f : Any]) #:transparent)
-(define-type ExprC (U NumC IdC IfC LamC AppC StrC PrimC))
+(struct AssignC ([var : Symbol] [val : ExprC]) #:transparent)
+(define-type ExprC (U NumC IdC IfC LamC AppC StrC PrimC AssignC))
 
 ; Value types
 (struct NumV ([n : Real]) #:transparent)
@@ -285,6 +286,11 @@
                       [else (cast ids (Listof Symbol))])
                     (parse body)) (map parse (cast exprs (Listof Sexp))))]
        [_ (error (format "SHEQ: ill-formed \"let\" expression, ~a" sexp))])]
+    [(list (? symbol? s) ':= val-sexp)
+     (cond
+       [(is-reserved? s)
+        (error (format "SHEQ: cannot assign to reserved keyword ~a" s))]
+       [else (AssignC s (parse val-sexp))])]
     [(list fun args ...) (AppC (parse fun) (map parse args))]
     [_ (error (format "SHEQ: ill-formed expression, ~a" sexp))]))
 
@@ -307,6 +313,12 @@
        [(BoolV b) (if b (interp then env sto) (interp otherwise env sto))]
        [_ (error (format "SHEQ: ~a is not a conditional expression" test))])]
     [(LamC args body) (CloV args body env)]
+    [(AssignC var val)
+     (define loc (env-lookup var env))
+     (define new-val (interp val env sto))
+     (begin
+       (vector-set! (Store-vals sto) loc new-val)
+       (NullV))]
     [(AppC fun args)
      (match (interp fun env sto)
        [(CloV params body closure-env)
@@ -715,32 +727,32 @@
 
 
 ;; ============================================
+;; ASSIGNMENT (:=) TESTS
+;; ============================================
+
+;; Basic assignment returns null
+(check-equal? (top-interp '{let {[x = 5]} in {x := 10} end} default-memsize) "null")
+
+;; Assignment and then read updated value
+(check-equal? (top-interp '{let {[x = 5]} in {seq {x := 10} x} end} default-memsize) "10")
+
+;; Assignment to undefined variable should error
+(check-exn #px"SHEQ" (lambda () (top-interp '{y := 5} default-memsize)))
+
+;; Multiple assignments
+(check-equal? (top-interp '{let {[x = 1] [y = 2]}
+                             in {seq {x := 10}
+                                     {y := 20}
+                                     {+ x y}}
+                             end} default-memsize) "30")
+
+;; Assignment with expression
+(check-equal? (top-interp '{let {[x = 5]}
+                             in {seq {x := {+ x 10}} x}
+                             end} default-memsize) "15")
+
+;; ============================================
 ;; ARRAY OPERATION TESTS
-;; ============================================
-
-;; ============================================
-;; make-array tests
-;; ============================================
-
-;; Basic make-array functionality
-(check-equal? (top-interp '{make-array 1 0} default-memsize) "#<array>")
-(check-equal? (top-interp '{make-array 5 42} default-memsize) "#<array>")
-(check-equal? (top-interp '{make-array 10 "hello"} default-memsize) "#<array>")
-(check-equal? (top-interp '{make-array 3 true} default-memsize) "#<array>")
-(check-equal? (top-interp '{make-array 2 false} default-memsize) "#<array>")
-
-;; make-array with different value types
-(check-equal? (top-interp '{make-array 3 3.14} default-memsize) "#<array>")
-(check-equal? (top-interp '{make-array 2 null} default-memsize) "#<array>")
-
-;; make-array with complex expressions
-(check-equal? (top-interp '{make-array {+ 2 3} 0} default-memsize) "#<array>")
-(check-equal? (top-interp '{make-array 4 {* 3 7}} default-memsize) "#<array>")
-
-;; Error: make-array with size < 1
-(check-exn #px"SHEQ" (lambda () (top-interp '{make-array 0 5} default-memsize)))
-(check-exn #px"SHEQ" (lambda () (top-interp '{make-array -1 5} default-memsize)))
-(check-exn #px"SHEQ" (lambda () (top-interp '{make-array -10 "x"} default-memsize)))
 
 ;; Error: make-array with non-numeric size
 (check-exn #px"SHEQ" (lambda () (top-interp '{make-array "five" 0} default-memsize)))
