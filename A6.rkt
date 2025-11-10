@@ -992,16 +992,8 @@
 ;; ============================================
 (check-equal?
  (top-interp
-  '{let {[i = 0]
-         [while = {let {[while = "bogus"]}
-                     in
-                     {seq
-                      {while := {lambda (guard body) :
-                                  {if {guard}
-                                      {seq {body} {while guard body}}
-                                      null}}}
-                      while}
-                     end}]}
+  `{let {[i = 0]
+         [while = ,while]}
      in
      {seq
       {while {lambda () : {<= i 3}}
@@ -1011,41 +1003,27 @@
   default-memsize)
  "4")
 
+
 (check-equal?
  (top-interp
-  '{let {[arr = {array 1 2 3 4 5}]
+  `{let {[arr = {array 1 2 3 4 5}]
          [size = 5]
-         [in-order = {let {[in-order = "whatever"]}
-                        in
-                        {seq
-                         {in-order := {lambda (arr size) :
-                                        {let {[i = 0]
-                                               [ordered = true]
-                                               [while = {let {[while = "whatever"]}
-                                                          in
-                                                          {seq
-                                                           {while := {lambda (guard body) :
-                                                                       {if {guard}
-                                                                           {seq {body} {while guard body}}
-                                                                           null}}}
-                                                           while}
-                                                          end}]}
-                                          in
-                                          {seq
-                                           {while
-                                             {lambda () :
-                                               {if ordered
-                                                   {<= i {- size 2}}   ;; <-- FIXED HERE
-                                                   false}}
-                                             {lambda () :
-                                               {if {<= {aref arr i} {aref arr {+ i 1}}}
-                                                   {i := {+ i 1}}
-                                                   {ordered := false}}}}
-                                           ordered}
-                                          end}}}
-                         in-order}
-                        end}]}
-     in {in-order arr size}
+         [while = ,while]
+         [in-order = ,in-order]}
+     in
+     {in-order arr size}
      end}
   default-memsize)
  "true")
+
+(check-equal?
+ (top-interp
+  `{let {[arr = {array 1 3 2 4 5}]
+         [size = 5]
+         [while = ,while]
+         [in-order = ,in-order]}
+     in
+     {in-order arr size}
+     end}
+  default-memsize)
+ "false")
