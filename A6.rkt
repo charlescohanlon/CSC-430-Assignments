@@ -803,6 +803,31 @@
 
 ;; ============================================
 ;; ARRAY OPERATION TESTS
+;; ============================================
+
+;; ============================================
+;; make-array tests
+;; ============================================
+
+;; Basic make-array functionality
+(check-equal? (top-interp '{make-array 1 0} default-memsize) "#<array>")
+(check-equal? (top-interp '{make-array 5 42} default-memsize) "#<array>")
+(check-equal? (top-interp '{make-array 10 "hello"} default-memsize) "#<array>")
+(check-equal? (top-interp '{make-array 3 true} default-memsize) "#<array>")
+(check-equal? (top-interp '{make-array 2 false} default-memsize) "#<array>")
+
+;; make-array with different value types
+(check-equal? (top-interp '{make-array 3 3.14} default-memsize) "#<array>")
+(check-equal? (top-interp '{make-array 2 null} default-memsize) "#<array>")
+
+;; make-array with complex expressions
+(check-equal? (top-interp '{make-array {+ 2 3} 0} default-memsize) "#<array>")
+(check-equal? (top-interp '{make-array 4 {* 3 7}} default-memsize) "#<array>")
+
+;; Error: make-array with size < 1
+(check-exn #px"SHEQ" (lambda () (top-interp '{make-array 0 5} default-memsize)))
+(check-exn #px"SHEQ" (lambda () (top-interp '{make-array -1 5} default-memsize)))
+(check-exn #px"SHEQ" (lambda () (top-interp '{make-array -10 "x"} default-memsize)))
 
 ;; Error: make-array with non-numeric size
 (check-exn #px"SHEQ" (lambda () (top-interp '{make-array "five" 0} default-memsize)))
