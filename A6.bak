@@ -74,8 +74,7 @@
         (Binding 'array 14)
         (Binding 'aref 15)
         (Binding 'aset! 16)
-        (Binding 'while 17)
-        (Binding 'null 18))))
+        (Binding 'null 17))))
 
 (struct Store ([vals : (Vectorof Value)] [memsize : Natural]) #:transparent)
 
@@ -100,7 +99,6 @@
                    (PrimV 'array)
                    (PrimV 'aref)
                    (PrimV 'aset!)
-                   (PrimV 'while)
                    (NullV)) memsize))
   (cond
     [(< memsize (vector-length (Store-vals init-sto)))
@@ -135,7 +133,7 @@
            (error (format "SHEQ: cannot allocate ~a, exceeded memory of size ~a" (serialize val) (Store-memsize sto)))])])]))
 
 ; eval-prim: evaluates primative operations
-(define (eval-prim [op : Symbol] [args : (Listof Value)] [env : Env] [sto : Store]) : Value
+(define (eval-prim [op : Symbol] [args : (Listof Value)] [sto : Store]) : Value
   (match (list op args)
     ;; Binary ops
     [(list '+ (list (NumV l) (NumV r))) (NumV (+ l r))]
@@ -205,7 +203,6 @@
        [(not (natural? i)) (error (format "SHEQ: index ~a must be a non-negative integer" i))]
        [(>= i (ArrayV-len arr)) (error (format "SHEQ: index ~a out of bounds for array length ~a" i (ArrayV-len arr)))]
        [else (aset! arr i val sto)])]
-
 
     ;; Catch-all for any other wrong arity/type
     [_ (error (format "SHEQ: bad primitive application ~a with args ~a" op args))]))
@@ -338,54 +335,8 @@
                           (map
                            (lambda ([arg : ExprC])
                              (interp arg env sto)) args)) sto)])]
-       [(PrimV op) (eval-prim op (map (lambda ([arg : ExprC]) (interp arg env sto)) args) env sto)]
+       [(PrimV op) (eval-prim op (map (lambda ([arg : ExprC]) (interp arg env sto)) args) sto)]
        [_ (error (format "SHEQ: function ~a is ill-formed" fun))])]))
-
-(define while
-  '{let {[while = "whatever"]}
-     in
-     {seq
-      {while := {lambda (guard body) :
-                  {if {guard}
-                      {seq {body} {while guard body}}
-                      null}}}
-      while}
-     end})
-
-
-(define in-order
-  '{let {[in-order = "whatever"]}
-     in
-     {seq
-      {in-order := {lambda (arr size) :
-                     {let {[i = 0]
-                           [ordered = true]
-                           [while = {let {[while = "whatever"]}
-                                      in
-                                      {seq
-                                       {while := {lambda (guard body) :
-                                                   {if {guard}
-                                                       {seq {body} {while guard body}}
-                                                       null}}}
-                                       while}
-                                      end}]}
-                       in
-                       {seq
-                        {while
-                          {lambda () :
-                            {if ordered
-                                {<= i {- size 2}}
-                                false}}
-                          {lambda () :
-                            {if {<= {aref arr i} {aref arr {+ i 1}}}
-                                {i := {+ i 1}}
-                                {ordered := false}}}}
-                        ordered}
-                       end}}}
-      in-order}
-     end})
-
-
 
 ;; ============================================
 ;; PARSING TESTS
@@ -492,7 +443,6 @@
 (check-equal? (serialize (CloV '(x) (NumC 1) (Env '()))) "#<procedure>")
 (check-equal? (serialize (PrimV '+)) "#<primop>")
 (check-equal? (serialize (NullV)) "null")
-
 
 ;; ============================================
 ;; TOP-LEVEL ENVIRONMENT TESTS
@@ -985,67 +935,3 @@
 (check-equal? (top-interp '{let {[arr1 = {array 1 2}]}
                              in {let {[arr2 = arr1]}
                                   in {equal? arr1 arr2} end} end} default-memsize) "true")
-
-
-;; ============================================
-;; while tests
-;; ============================================
-(check-equal?
- (top-interp
-  '{let {[i = 0]
-         [while = {let {[while = "bogus"]}
-                     in
-                     {seq
-                      {while := {lambda (guard body) :
-                                  {if {guard}
-                                      {seq {body} {while guard body}}
-                                      null}}}
-                      while}
-                     end}]}
-     in
-     {seq
-      {while {lambda () : {<= i 3}}
-             {lambda () : {i := {+ i 1}}}}
-      i}
-     end}
-  default-memsize)
- "4")
-
-(check-equal?
- (top-interp
-  '{let {[arr = {array 1 2 3 4 5}]
-         [size = 5]
-         [in-order = {let {[in-order = "whatever"]}
-                        in
-                        {seq
-                         {in-order := {lambda (arr size) :
-                                        {let {[i = 0]
-                                               [ordered = true]
-                                               [while = {let {[while = "whatever"]}
-                                                          in
-                                                          {seq
-                                                           {while := {lambda (guard body) :
-                                                                       {if {guard}
-                                                                           {seq {body} {while guard body}}
-                                                                           null}}}
-                                                           while}
-                                                          end}]}
-                                          in
-                                          {seq
-                                           {while
-                                             {lambda () :
-                                               {if ordered
-                                                   {<= i {- size 2}}   ;; <-- FIXED HERE
-                                                   false}}
-                                             {lambda () :
-                                               {if {<= {aref arr i} {aref arr {+ i 1}}}
-                                                   {i := {+ i 1}}
-                                                   {ordered := false}}}}
-                                           ordered}
-                                          end}}}
-                         in-order}
-                        end}]}
-     in {in-order arr size}
-     end}
-  default-memsize)
- "true")
