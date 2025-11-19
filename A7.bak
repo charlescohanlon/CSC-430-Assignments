@@ -18,8 +18,7 @@
 (struct StrC ([s : String]) #:transparent)
 (struct AssignC ([var : Symbol] [val : ExprC]) #:transparent)
 (struct SeqC ([exprs : (Listof ExprC)]) #:transparent)
-(struct RecC ([id : Symbol] [ty : Type] [rhs : ExprC] [body : ExprC]) #:transparent)
-(define-type ExprC (U NumC IdC IfC LamC AppC StrC AssignC SeqC RecC))
+(define-type ExprC (U NumC IdC IfC LamC AppC StrC AssignC SeqC))
 
 ; Value AS
 (struct NumV ([n : Real]) #:transparent)
@@ -321,14 +320,7 @@
     [(SeqC exprs)
      ; Type check all expressions, return type of last one
      (define types (map (lambda ([e : ExprC]) (type-check e tenv)) exprs))
-     (last types)]
-    [(RecC id ty rhs body)
-     (define rec-tenv (tenv-extend (TBinding id ty) tenv))
-     (define rhs-ty (type-check rhs rec-tenv))
-     (unless (equal? rhs-ty ty)
-       (error (format "SHEQ: recursive definition type mismatch: expected ~a got ~a"
-                      ty rhs-ty)))
-     (type-check body rec-tenv)]))
+     (last types)]))
 
 ;; ====================
 ;; Parser
@@ -373,14 +365,6 @@
      (cond
        [(empty? exprs) (error (format "SHEQ: seq requires at least one expression"))]
        [else (SeqC (map parse exprs))])]
-    [(list 'rlet (list (list ty id '= rhs)) 'in body 'end)
-     (RecC (cast id Symbol)
-           (parse-type ty)
-           (parse rhs)
-           (parse body))]
-
-    [(list 'rlet other ...)
-     (error (format "SHEQ: ill-formed rlet expression ~a" sexp))]
     [(list fun args ...) (AppC (parse fun) (map parse args))]
     [_ (error (format "SHEQ: ill-formed expression, ~a" sexp))]))
 
@@ -416,12 +400,6 @@
      ; Evaluate all expressions in order, return last value
      (define values (map (lambda ([e : ExprC]) (interp e env sto)) exprs))
      (last values)]
-    [(RecC id ty rhs body)
-     (define loc (allocate (NullV) sto))
-     (define rec-env (env-extend (Binding id loc) env))
-     (define val (interp rhs rec-env sto))
-     (vector-set! (Store-vals sto) loc val)
-     (interp body rec-env sto)]
     [(AppC fun args)
      (match (interp fun env sto)
        [(CloV params body closure-env)
@@ -837,28 +815,6 @@
 
 (check-exn #px"SHEQ" (lambda () (top-interp '{aref {make-array 3 0} "zero"})))
 (check-exn #px"SHEQ" (lambda () (top-interp '{aref {make-array 3 0} true})))
-
-
-;; ============================================
-;; RecC tests
-;; ============================================
-(check-equal?
- (top-interp
-  '{rlet (({num -> num} f = {lambda ((num n)) :
-                                   {if {<= n 0} 0 {+ n {f {- n 1}}}}}))
-     in (f 5)
-     end})
- "15")
-
-(check-exn
- #px"SHEQ: ill-formed rlet expression"
- (λ ()
-   (top-interp
-    '{rlet (num f = 5)   
-        in (f)
-        end})))
-
-
 
 ;; ============================================
 ;; aset! tests
