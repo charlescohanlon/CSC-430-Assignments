@@ -762,47 +762,47 @@
 ;; ============================================
 
 ;; Basic aref functionality (converted from array to make-array)
-; (check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
-;                              in {seq {aset! arr 0 10}
-;                                      {aset! arr 1 20}
-;                                      {aset! arr 2 30}
-;                                      {aref arr 0}}
-;                              end}) "10")
+(check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
+                             in {seq {aset! arr 0 10}
+                                     {aset! arr 1 20}
+                                     {aset! arr 2 30}
+                                     {aref arr 0}}
+                             end}) "10")
 
-; (check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
-;                              in {seq {aset! arr 0 10}
-;                                      {aset! arr 1 20}
-;                                      {aset! arr 2 30}
-;                                      {aref arr 1}}
-;                              end}) "20")
+(check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
+                             in {seq {aset! arr 0 10}
+                                     {aset! arr 1 20}
+                                     {aset! arr 2 30}
+                                     {aref arr 1}}
+                             end}) "20")
 
-; (check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
-;                              in {seq {aset! arr 0 10}
-;                                      {aset! arr 1 20}
-;                                      {aset! arr 2 30}
-;                                      {aref arr 2}}
-;  end}) "30")
+(check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
+                             in {seq {aset! arr 0 10}
+                                     {aset! arr 1 20}
+                                     {aset! arr 2 30}
+                                     {aref arr 2}}
+ end}) "30")
 
 ;; aref with make-array default values
 (check-equal? (top-interp '{aref {make-array 5 42} 0}) "42")
 (check-equal? (top-interp '{aref {make-array 5 42} 4}) "42")
 
 ;; aref with complex expressions for index
-; (check-equal? (top-interp '{let {[numarray arr = {make-array 4 0}]}
-;                              in {seq {aset! arr 0 1}
-;                                      {aset! arr 1 2}
-;                                      {aset! arr 2 3}
-;                                      {aset! arr 3 4}
-;                                      {aref arr {+ 1 2}}}
-;                              end}) "4")
+(check-equal? (top-interp '{let {[numarray arr = {make-array 4 0}]}
+                             in {seq {aset! arr 0 1}
+                                     {aset! arr 1 2}
+                                     {aset! arr 2 3}
+                                     {aset! arr 3 4}
+                                     {aref arr {+ 1 2}}}
+                             end}) "4")
 
 ;; aref in let binding
-; (check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
-;                              in {seq {aset! arr 0 5}
-;                                      {aset! arr 1 10}
-;                                      {aset! arr 2 15}
-;                                      {aref arr 1}}
-;                              end}) "10")
+(check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
+                             in {seq {aset! arr 0 5}
+                                     {aset! arr 1 10}
+                                     {aset! arr 2 15}
+                                     {aref arr 1}}
+                             end}) "10")
 
 (check-exn #px"SHEQ" (lambda () (top-interp '{aref {make-array 3 0} -1})))
 (check-exn #px"SHEQ" (lambda () (top-interp '{aref {make-array 3 0} 3})))
@@ -820,27 +820,27 @@
 ;; aset! tests
 ;; ============================================
 
-; (check-equal? (top-interp '{aset! {make-array 3 0} 0 100}) "null")
-; (check-equal? (top-interp '{aset! {make-array 3 0} 1 42}) "null")
+(check-equal? (top-interp '{aset! {make-array 3 0} 0 100}) "null")
+(check-equal? (top-interp '{aset! {make-array 3 0} 1 42}) "null")
 
-; (check-equal? (top-interp '{let {[{numarray num} arr = {make-array 3 10}]}
-;                           in {seq {aset! arr 1 99}
-;                                   {aref arr 1}}
-;                           end}) "99")
+(check-equal? (top-interp '{let {[numarray arr = {make-array 3 10}]}
+                          in {seq {aset! arr 1 99}
+                                  {aref arr 1}}
+                          end}) "99")
 
-; (check-equal? (top-interp '{let {[{numarray num} arr = {make-array 3 0}]}
-;                           in {seq {aset! arr 1 {+ 5 10}}
-;                                   {aref arr 1}}
-;                           end}) "15")
+(check-equal? (top-interp '{let {[numarray arr = {make-array 3 0}]}
+                          in {seq {aset! arr 1 {+ 5 10}}
+                                  {aref arr 1}}
+                          end}) "15")
 
-; (check-equal? (top-interp '{let {[{numarray num} arr = {make-array 5 0}]}
-;                           in {seq {aset! arr 0 10}
-;                                   {aset! arr 1 20}
-;                                   {aset! arr 2 30}
-;                                   {aset! arr 3 40}
-;                                   {aset! arr 4 50}
-;                                   {aref arr 2}}
-;                           end}) "30")
+(check-equal? (top-interp '{let {[numarray arr = {make-array 5 0}]}
+                          in {seq {aset! arr 0 10}
+                                  {aset! arr 1 20}
+                                  {aset! arr 2 30}
+                                  {aset! arr 3 40}
+                                  {aset! arr 4 50}
+                                  {aref arr 2}}
+                          end}) "30")
 
 (check-exn #px"SHEQ" (lambda () (top-interp '{aset! {make-array 3 0} -1 100})))
 (check-exn #px"SHEQ" (lambda () (top-interp '{aset! {make-array 3 0} 3 100})))
@@ -853,23 +853,23 @@
 (check-exn #px"SHEQ" (lambda () (top-interp '{aset! {make-array 3 0} "zero" 100})))
 (check-exn #px"SHEQ" (lambda () (top-interp '{aset! {make-array 3 0} false 100})))
 
-; ;; ============================================
-; ;; Order of evaluation tests (with type annotations)
-; ;; ============================================
+;; ============================================
+;; Order of evaluation tests (with type annotations)
+;; ============================================
 
-; (check-equal? (top-interp '{let {[num x = 5]}
-;                           in {make-array {seq {x := 3} x} {seq {x := 10} x}}
-;                           end}) "#<array>")
+(check-equal? (top-interp '{let {[num x = 5]}
+                          in {make-array {seq {x := 3} x} {seq {x := 10} x}}
+                          end}) "#<array>")
 
-; (check-equal? (top-interp '{let {[num x = 5]}
-;                           in {let {[numarray arr = {make-array {seq {x := 3} x} {seq {x := 10} x}}]}
-;                                 in {aref arr 2}
-;                                 end}
-;                           end}) "10")
+(check-equal? (top-interp '{let {[num x = 5]}
+                          in {let {[numarray arr = {make-array {seq {x := 3} x} {seq {x := 10} x}}]}
+                                in {aref arr 2}
+                                end}
+                          end}) "10")
 
-; (check-equal? (top-interp '{let {[num idx = 0]
-;                               [num val = 100]
-;                               [numarray arr = {make-array 3 1}]}
-;                           in {seq {aset! arr {seq {idx := 2} idx} {seq {val := 999} val}}
-;                                   {aref arr 2}}
-;                           end}) "999")
+(check-equal? (top-interp '{let {[num idx = 0]
+                              [num val = 100]
+                              [numarray arr = {make-array 3 1}]}
+                          in {seq {aset! arr {seq {idx := 2} idx} {seq {val := 999} val}}
+                                  {aref arr 2}}
+                          end}) "999")
