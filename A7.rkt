@@ -17,7 +17,8 @@
 (struct AppC ([fun : ExprC] [args : (Listof ExprC)]) #:transparent)
 (struct StrC ([s : String]) #:transparent)
 (struct AssignC ([var : Symbol] [val : ExprC]) #:transparent)
-(define-type ExprC (U NumC IdC IfC LamC AppC StrC AssignC))
+(struct SeqC ([exprs : (Listof ExprC)]) #:transparent)
+(define-type ExprC (U NumC IdC IfC LamC AppC StrC AssignC SeqC))
 
 ; Value AS
 (struct NumV ([n : Real]) #:transparent)
@@ -238,7 +239,7 @@
     ;; Catch-all for any other wrong arity/type
     [_ (error (format "SHEQ: bad primitive application ~a with args ~a" op args))]))
 
-(define reserved-set (list 'if 'let 'rlet '= 'lambda ': '-> 'in 'end))
+(define reserved-set (list 'if 'let 'rlet '= 'lambda ': '-> 'in 'end 'seq))
 ; is-reserved: determines if the given symbols is in the set of reserved keywords
 (define (is-reserved? [s : Symbol]) : Boolean
   (if (member s reserved-set) #t #f))
@@ -315,7 +316,11 @@
      (define val-type (type-check val tenv))
      (if (equal? var-type val-type)
          (VoidT)
-         (error "SHEQ: type mismatch in assignment"))]))
+         (error "SHEQ: type mismatch in assignment"))]
+    [(SeqC exprs)
+     ; Type check all expressions, return type of last one
+     (define types (map (lambda ([e : ExprC]) (type-check e tenv)) exprs))
+     (last types)]))
 
 ;; ====================
 ;; Parser
@@ -356,6 +361,10 @@
                     (parse body)) (map parse (cast exprs (Listof Sexp))))]
        [_ (error (format "SHEQ: ill-formed \"let\" expression, ~a" sexp))])]
     [(list (? symbol? s) ':= val-sexp) (AssignC s (parse val-sexp))]
+    [(list 'seq exprs ...)
+     (cond
+       [(empty? exprs) (error (format "SHEQ: seq requires at least one expression"))]
+       [else (SeqC (map parse exprs))])]
     [(list fun args ...) (AppC (parse fun) (map parse args))]
     [_ (error (format "SHEQ: ill-formed expression, ~a" sexp))]))
 
@@ -387,6 +396,10 @@
      (begin
        (vector-set! (Store-vals sto) loc new-val)
        (NullV))]
+    [(SeqC exprs)
+     ; Evaluate all expressions in order, return last value
+     (define values (map (lambda ([e : ExprC]) (interp e env sto)) exprs))
+     (last values)]
     [(AppC fun args)
      (match (interp fun env sto)
        [(CloV params body closure-env)
@@ -711,19 +724,19 @@
 ; Uncomment when seq is implemented
 (check-equal? (top-interp '{let {[num x = 5]} in {x := 10} end}) "null")
 
-; (check-equal? (top-interp '{let {[num x = 5]} in {seq {x := 10} x} end}) "10")
+(check-equal? (top-interp '{let {[num x = 5]} in {seq {x := 10} x} end}) "10")
 
 (check-exn #px"SHEQ" (lambda () (top-interp '{y := 5})))
 
-; (check-equal? (top-interp '{let {[num x = 1] [num y = 2]}
-;                              in {seq {x := 10}
-;                                      {y := 20}
-;                                      {+ x y}}
-;                              end}) "30")
+(check-equal? (top-interp '{let {[num x = 1] [num y = 2]}
+                              in {seq {x := 10}
+                                      {y := 20}
+                                      {+ x y}}
+                              end}) "30")
 
-; (check-equal? (top-interp '{let {[num x = 5]}
-;                              in {seq {x := {+ x 10}} x}
-;                              end}) "15")
+(check-equal? (top-interp '{let {[num x = 5]}
+                              in {seq {x := {+ x 10}} x}
+                              end}) "15")
 
 ;; ============================================
 ;; make-array tests
