@@ -8,7 +8,7 @@ begin
   comment "NOTE: identifiers are represented as integers, and therefore restricted to one character symbols";
   integer array idcContent [0:999];
 
-  comment "TODO: implement LamC, AppC, and StrC representations w/ the buffer approach"
+  integer array primcContent [0:999];
   comment "Implement functions that abtract away the buffer details for LamC and AppC nodes"
 
   comment "Store arg list of symbols for LamC";
@@ -16,17 +16,21 @@ begin
   integer array lamcStartPos [0:999]; comment "Points to where in lamcArgBuffer the arg list starts";
   integer array lamcNumArgs [0:999];  comment "Number of args for this LamC"
                                       comment "(StartPos and NumArgs are parallel with the rest of the AST)";
-  integer array lamcArgBuffer [0:999]; comment "Contains the arg symbols themselves";
-  
-  integer array strcBuffer [0:999];
-  integer array strStartPos [0:999];
-  integer array strNumElems [0:999];
+  integer array lamcArgBuffer [0:999]; comment "Contains the arg symbols themselves. this will be the list of symbols";
+  integer nextLamcArgPos;  comment "Next free position in lamcArgBuffer"
+
+  comment "Store ASCII character codes for StrC";
+  integer array strcStartPos [0:999];
+  integer array strcLength [0:999];
+  integer array strcCharBuffer [0:999];
+  integer nextStrcCharPos; comment "Next free position in strcCharBuffer"
   
   comment "Store arg list of AST indices for AppC";
   integer array appcFun [0:999]; comment "Points to the function being applied in the AST";
   integer array appcStartPos [0:999];
   integer array appcNumArgs [0:999];
-  integer array appcArgBuffer [0:999];
+  integer array appcArgBuffer [0:999];  comment "Contains the AST indices of argument expressions";
+  integer nextAppcArgPos;
 
   integer nextFreePos;
   integer numcCode, idcCode, ifcCode, lamcCode, appcCode, strcCode;
@@ -73,7 +77,9 @@ begin
     ifcNode := addCoreType(ifcCode);
     addChild(ifcNode, testNode);
     addChild(ifcNode, thenNode);
-    addChild(ifcNode, elseNode)
+    addChild(ifcNode, elseNode);
+
+    addIfC := ifcNode
   end;
 
   comment "Get the index in coreType array of the pos-th sibling of the parent node"
@@ -137,6 +143,19 @@ begin
     getIdC := idcContent[idx]
   end;
 
+  comment "PrimC functions";
+  procedure setPrimC(idx, symbol);
+     integer idx, symbol;
+  begin
+     primcContent[idx] := symbol
+  end;
+
+  integer procedure getPrimC(idx);
+     integer idx;
+  begin
+     getPrimC := primcContent[idx]
+  end;
+
   comment "Get the 'test' condition of the IfC at AST index idx"
   comment "fc: firstChild array"
   comment "ns: nextSibling array"
@@ -173,6 +192,149 @@ begin
     getIfCElse := privateGetSibling(fc, ns, idx, 2)
   end;
 
+comment "===================  LamC Functions  ===================";
+  integer procedure addLamC(argSymbols, numArgs, bodyNode);
+     integer numArgs, bodyNode;
+     integer array argSymbols;
+  begin
+     integer lamcNode, i, bufferStart;
+
+     comment "1. Create the LamC node in the AST";
+     lamcNode := addCoreType(lamcCode);
+
+     comment "2. Store reference to the body expression";
+     lamcBody[lamcNode] := bodyNode;
+
+     comment "3. Where args will starts in the shared buffer";
+     bufferStart := nextLamcArgPos;
+     lamcStartPos[lamcNode] := bufferStart;
+
+     comment "4. How many args this lambda has";
+     lamcNumArgs[lamcNode] := numArgs;
+
+     comment "5. Copy argument symbols into shared buffer";
+     for i := 0 step 1 until numArgs -1 do
+        lamcArgBuffer[bufferStart + i] := argSymbols[i];
+
+     comment "6. Adavnce the next free position in buffer";
+     nextLamcArgPos := nextLamcArgPos + numArgs;
+
+     comment "7. Returns the AST index of the new LamC node";
+     addLamC := lamcNode
+  end;
+
+  comment "Get the body AST index of a LamC node";
+  integer procedure getLamCBody(idx);
+     integer idx;
+  begin
+     getLamCBody := lamcBody[idx]
+  end;
+
+  comment "Get the num of args of a lamC node";
+  integer procedure getLamCNumArgs(idx);
+     integer idx;
+  begin
+     getLamCNumArgs := lamcNumArgs[idx];
+  end;
+
+  comment "Get the n-th argument symbol of a LamC node";
+  integer procedure getLamCArg(idx, n);
+     integer idx, n;
+  begin
+     integer startPos;
+     startPos := lamcStartPos[idx];
+     getLamCArg := lamcArgBuffer[startPos + n]
+  end;
+
+  comment "=============  AppC Functions ================";
+  integer procedure addAppC(funNode, argNodes, numArgs);
+    integer funNode, numArgs;
+    integer array argNodes;
+
+  begin
+    integer appcNode, i, bufferStart;
+
+    appcNode := addCoreType(appcCode);
+
+    comment "Store reference to the function expression";
+    appcFun[appcNode] := funNode;
+
+    comment "Where args will start in the shared buffer";
+    bufferStart := nextAppcArgPos;
+    appcStartPos[appcNode] := bufferStart;
+
+    comment "How many args this app has";
+    appcNumArgs[appcNode] := numArgs;
+
+    comment "Copy argument AST indices into shared buffer";
+    for i := 0 step 1 until numArgs - 1 do
+       appcArgBuffer[bufferStart + i] := argNodes[i];
+
+    nextAppcArgPos := nextAppcArgPos + numArgs;
+    addAppC := appcNode
+  end;
+
+ comment "Get the function AST index of an AppC node";
+  integer procedure getAppCFun(idx);
+     integer idx;
+  begin
+     getAppCFun := appcFun[idx]
+  end;
+
+  comment "Get the number of arguments of an AppC node";
+  integer procedure getAppCNumArgs(idx);
+     integer idx;
+  begin
+     getAppCNumArgs := appcNumArgs[idx]
+  end;
+
+  comment "Get the n-th argument AST index of an AppC node";
+  integer procedure getAppCArg(idx, n);
+     integer idx, n;
+  begin
+     integer startPos;
+     startPos := appcStartPos[idx];
+     getAppCArg := appcArgBuffer[startPos + n]
+  end;
+
+
+  comment "=============  StrC Functions ================";
+  integer procedure addStrC(asciiCodes, length);
+    integer length;
+    integer array asciiCodes;
+
+  begin
+    integer strcNode, i, bufferStart;
+    strcNode := addCoreType(strcCode);
+    bufferStart := nextStrcCharPos;
+    strcStartPos[strcNode] := bufferStart;
+    strcLength[strcNode] := length;
+
+    comment "Copy ASCII characters into shared buffer";
+    for i := 0 step 1 until length - 1 do
+       strcCharBuffer[bufferStart + i] := asciiCodes[i];
+
+    nextStrcCharPos := nextStrcCharPos + length;
+
+    addStrC := strcNode
+  end;
+
+  comment "Length of StrC string";
+  integer procedure getStrCLength(idx);
+      integer idx;
+  begin
+      getStrCLength := strcLength[idx]
+  end;
+
+  comment "Get the n-th character of a StrC string";
+  integer procedure getStrCChar(idx, n);
+     integer idx, n;
+  begin
+     integer startPos;
+     startPos := strcStartPos[idx];
+     getStrCChar := strcCharBuffer[startPos + n]
+  end;
+
   comment "Clear the AST representation"
   comment "NOTE: this function is extremely slow to use idk why";
   procedure clearAST;
@@ -187,19 +349,63 @@ begin
         idcContent[i] := -1;
         i := i + 1
       end;
-    nextFreePos := 0
+    nextFreePos := 0;
+    nextLamcArgPos := 0;
+    nextStrcCharPos := 0
   end;
 
+  comment "============================== END AST REPRESENTATION =============================="
+
+  comment "============================== BEGIN VALUE REPRESENTATION ==========================";
+  integer array valueType [0:999];
+  real array numVContent [0:999];
+  integer array boolVContent [0:999];
+  integer array strVStartPos, strVLength, strVCharBuffer [0:999];
+  integer array cloVParamsStart, cloVNumParams, cloVParamsBuffer [0:999];
+  integer array cloVBody, clovEnv [0:999];
+  integer array primVSymbol [0:999];
+  integer nextValuePos, nextStrvCharPos, nextClovParamsPos;
+  integer numvCode, boolvCode, strvCode, clovCode, primvCode;
+
+  integer procedure createNumV(n);
+    real n;
+  begin
+    integer valIdx;
+    valIdx := nextValuePos;
+    valueType[valIdx] := numvCode;
+    numVContent[valIdx] := n;
+    nextValuePos := nextValuePos + 1;
+    createNumV := valIdx
+  end;
+
+  integer procedure createBoolV(b);
+     integer b;
+  begin
+     integer valIdx;
+     valIdx := nextValuePos;
+     valueType[valIdx] := boolvCode;
+     boolVContent[valIdx] := b;
+     nextValuePos := nextValuePos + 1;
+     createBoolV := valIdx
+  end;
+  
+  comment "TODO : Create strV, cloV and primV creation"
+  
   comment "Initialize AST representation";
   nextFreePos := 0;
+  nextLamcArgPos := 0;
+  nextStrcCharPos := 0;
   numcCode := 0;
   idcCode := 1;
   ifcCode := 2;
   lamcCode := 3;
   appcCode := 4;
   strcCode := 5;
-  comment "============================== END AST REPRESENTATION ==============================";
 
+
+    
+
+  comment "============================== AST Node Examples ============================"";
   begin 
     comment "The following is equivalent to instantiating (IfC (NumC 1) (NumC 2) (NumC 3))";
     integer ifcNode, num1, num2, num3;
@@ -211,5 +417,60 @@ begin
     num3 := addCoreType(numcCode);
     setNumC(num3, 3.0);
     ifcNode := addIfC(num1, num2, num3);
+  end;
+
+  begin
+    comment "LamC Example - (lambda () 3)";
+    integer lambdaNode, bodyNode;
+    integer retrievedBody, retrievedNumArgs;
+    integer array emptyParams[0:0];
+  
+    bodyNode := addCoreType(numcCode);
+    setNumC(bodyNode, 3.0);
+
+    lambdaNode := addLamC(emptyParams, 0, bodyNode);
+
+    retrievedBody := getLamCBody(lambdaNode);
+    retrievedNumArgs := getLamCNumArgs(lambdaNode)
+  end;
+
+  begin
+    comment "AppC Example - ((lambda (x) : x) 5)";
+    integer lambdaNode, bodyNode, argNode, appNode;
+    integer array params[0:0];
+    integer array args[0:0];
+    integer retrievedFun, retrievedNumArgs, retrievedArg0;
+
+    comment "Create the lambda (lambda (x) : x)";
+    params[0] := 120; comment "x in ascii is 120";
+    bodyNode := addCoreType(idcCode);
+    setIdC(bodyNode, 120); comment "body is x";
+    lambdaNode := addLamC(params, 1, bodyNode);
+
+    argNode := addCoreType(numcCode);
+    setNumC(argNode, 5.0);
+
+    args[0] := argNode;
+    appNode := addAppC(lambdaNode, args, 1);
+  end;
+
+  begin
+    comment"StrC Example - "hello"";
+    integer strcNode;
+    integer array helloChars[0:4];
+    integer retrievedLength, char0, char1, char2, char3, char4;
+
+    helloChars[0] := 104; comment "h";
+    helloChars[1] := 101; comment "e";
+    helloChars[2] := 108; comment "l";
+    helloChars[3] := 108; comment "l";
+    helloChars[4] := 111; comment "o";
+
+   strcNode := addStrC(helloChars, 5);
+
+   retrievedLength := getStrCLength(strcNode);
+   char0 := getStrCChar(strcNode, 0);
+   char1 := getStrCChar(strcNode, 1)
   end
+  
 end
