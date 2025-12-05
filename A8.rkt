@@ -360,13 +360,24 @@ comment "===================  LamC Functions  ===================";
   integer array valueType [0:999];
   real array numVContent [0:999];
   integer array boolVContent [0:999];
-  integer array strVStartPos, strVLength, strVCharBuffer [0:999];
-  integer array cloVParamsStart, cloVNumParams, cloVParamsBuffer [0:999];
-  integer array cloVBody, clovEnv [0:999];
-  integer array primVSymbol [0:999];
-  integer nextValuePos, nextStrvCharPos, nextClovParamsPos;
-  integer numvCode, boolvCode, strvCode, clovCode, primvCode;
 
+  comment "StrV uses same buffer pattern as StrC";
+  integer array strVStartPos, strVLength [0:999];
+  integer array strVCharBuffer [0:999];
+  integer nextStrVCharPos;
+
+  comment "CloV - closure values";
+  integer array cloVParamsStart, cloVNumParams [0:999];
+  integer array cloVParamsBuffer [0:999];
+  integer array cloVBody [0:999];
+  integer array cloVEnv [0:999];
+  integer nextCloVParamsPos;
+
+  comment "PrimV - primitive function values";
+  integer array primVSymbol [0:999];
+
+  integer nextValuePos;
+  integer numvCode, boolvCode, strvCode, clovCode, primvCode;
   integer procedure createNumV(n);
     real n;
   begin
@@ -376,6 +387,12 @@ comment "===================  LamC Functions  ===================";
     numVContent[valIdx] := n;
     nextValuePos := nextValuePos + 1;
     createNumV := valIdx
+  end;
+
+  real procedure getNumV(valIdx);
+    integer valIdx;
+  begin
+    getNumV := numVContent[valIdx]
   end;
 
   integer procedure createBoolV(b);
@@ -389,18 +406,174 @@ comment "===================  LamC Functions  ===================";
      createBoolV := valIdx
   end;
   
-  comment "TODO : Create strV, cloV and primV creation"
+    integer procedure getBoolV(valIdx);
+    integer valIdx;
+  begin
+    getBoolV := boolVContent[valIdx]
+  end;
+
+comment "==================== StrV Functions ====================";
+integer procedure createStrV(asciiCodes, length);
+  integer length;
+  integer array asciiCodes;
+begin
+  integer valIdx, i, bufferStart;
+  valIdx := nextValuePos;
+  valueType[valIdx] := strvCode;
   
-  comment "Initialize AST representation";
-  nextFreePos := 0;
-  nextLamcArgPos := 0;
-  nextStrcCharPos := 0;
-  numcCode := 0;
-  idcCode := 1;
-  ifcCode := 2;
-  lamcCode := 3;
-  appcCode := 4;
-  strcCode := 5;
+  bufferStart := nextStrVCharPos;
+  strVStartPos[valIdx] := bufferStart;
+  strVLength[valIdx] := length;
+  
+  comment "Copy ASCII characters into StrV buffer";
+  for i := 0 step 1 until length - 1 do
+    strVCharBuffer[bufferStart + i] := asciiCodes[i];
+  
+  nextStrVCharPos := nextStrVCharPos + length;
+  nextValuePos := nextValuePos + 1;
+  createStrV := valIdx
+end;
+
+  integer procedure getStrVLength(valIdx);
+    integer valIdx;
+  begin
+    getStrVLength := strVLength[valIdx]
+  end;
+
+  integer procedure getStrVChar(valIdx, n);
+    integer valIdx, n;
+  begin
+    integer startPos;
+    startPos := strVStartPos[valIdx];
+    getStrVChar := strVCharBuffer[startPos + n]
+  end;
+  
+  comment "==================== CloV Functions ====================";
+  integer procedure createCloV(paramSymbols, numParams, bodyNode, envIdx);
+    integer numParams, bodyNode, envIdx;
+    integer array paramSymbols;
+  begin
+    integer valIdx, i, bufferStart;
+    valIdx := nextValuePos;
+    valueType[valIdx] := clovCode;
+    
+    comment "Store body and environment references";
+    cloVBody[valIdx] := bodyNode;
+    cloVEnv[valIdx] := envIdx;
+    
+    comment "Store parameters in buffer";
+    bufferStart := nextCloVParamsPos;
+    cloVParamsStart[valIdx] := bufferStart;
+    cloVNumParams[valIdx] := numParams;
+    
+    for i := 0 step 1 until numParams - 1 do
+      cloVParamsBuffer[bufferStart + i] := paramSymbols[i];
+    
+    nextCloVParamsPos := nextCloVParamsPos + numParams;
+    nextValuePos := nextValuePos + 1;
+    createCloV := valIdx
+  end;
+
+  integer procedure getCloVBody(valIdx);
+    integer valIdx;
+  begin
+    getCloVBody := cloVBody[valIdx]
+  end;
+
+  integer procedure getCloVEnv(valIdx);
+    integer valIdx;
+  begin
+    getCloVEnv := cloVEnv[valIdx]
+  end;
+
+  integer procedure getCloVNumParams(valIdx);
+    integer valIdx;
+  begin
+    getCloVNumParams := cloVNumParams[valIdx]
+  end;
+
+  integer procedure getCloVParam(valIdx, n);
+    integer valIdx, n;
+  begin
+    integer startPos;
+    startPos := cloVParamsStart[valIdx];
+    getCloVParam := cloVParamsBuffer[startPos + n]
+  end;
+  
+  comment "==================== PrimV Functions ====================";
+  integer procedure createPrimV(symbol);
+    integer symbol;
+  begin
+    integer valIdx;
+    valIdx := nextValuePos;
+    valueType[valIdx] := primvCode;
+    primVSymbol[valIdx] := symbol;
+    nextValuePos := nextValuePos + 1;
+    createPrimV := valIdx
+  end;
+
+  integer procedure getPrimV(valIdx);
+    integer valIdx;
+  begin
+    getPrimV := primVSymbol[valIdx]
+  end;
+
+  comment "==================== Value Type Checking ====================";
+  Boolean procedure isNumV(valIdx);
+    integer valIdx;
+  begin
+    isNumV := valueType[valIdx] = numvCode
+  end;
+
+  Boolean procedure isBoolV(valIdx);
+    integer valIdx;
+  begin
+    isBoolV := valueType[valIdx] = boolvCode
+  end;
+
+  Boolean procedure isStrV(valIdx);
+    integer valIdx;
+  begin
+    isStrV := valueType[valIdx] = strvCode
+  end;
+
+  Boolean procedure isCloV(valIdx);
+    integer valIdx;
+  begin
+    isCloV := valueType[valIdx] = clovCode
+  end;
+
+  Boolean procedure isPrimV(valIdx);
+    integer valIdx;
+  begin
+    isPrimV := valueType[valIdx] = primvCode
+  end;
+  
+comment "Initialize AST representation";
+nextFreePos := 0;
+nextLamcArgPos := 0;
+nextStrcCharPos := 0;
+nextAppcArgPos := 0;  comment 
+
+
+numcCode := 0;
+idcCode := 1;
+ifcCode := 2;
+lamcCode := 3;
+appcCode := 4;
+strcCode := 5;
+
+comment "Initialize Value representation";
+nextValuePos := 0;
+nextStrVCharPos := 0;  
+nextCloVParamsPos := 0;
+
+comment "Value type codes - ADD THESE!";
+numvCode := 100;
+boolvCode := 101;
+strvCode := 102;
+clovCode := 103;
+primvCode := 104;
 
 
     
